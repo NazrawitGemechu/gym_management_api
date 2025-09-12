@@ -6,4 +6,4 @@ python-decouple==3.8
 dj-database-url==2.1.0
 pytest==8.3.2
 pytest-django==4.5.2
-setuptools>=65.0
+
