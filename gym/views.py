@@ -2,12 +2,13 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action,api_view,permission_classes
 from rest_framework.response import Response
 from .models import User, MembershipPass, GymVisit
-from .serializers import ChangePasswordSerializer,AssignCoachSerializer,UserSerializer, UserListSerializer,MembershipPassSerializer,GymVisitSerializer,GymVisitHistorySerializer,ClientCoachSerializer,CoachWithClientsSerializer
+from .serializers import ClientDashboardSerializer, CoachDashboardSerializer, AdminDashboardSerializer,ChangePasswordSerializer,AssignCoachSerializer,UserSerializer, UserListSerializer,MembershipPassSerializer,GymVisitSerializer,GymVisitHistorySerializer,ClientCoachSerializer,CoachWithClientsSerializer
 from .permissions import IsAdministrator,IsOwnerOrAdmin,IsClient,IsCoach
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework_simplejwt.tokens import AccessToken
 from django.contrib.auth import authenticate
-from django.shortcuts import get_object_or_404 
+from django.utils import timezone
+from datetime import timedelta
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -23,6 +24,84 @@ def login(request):
     return Response({
         'error':'Invalid Credentials'
     },status=status.HTTP_401_UNAUTHORIZED)
+
+class DashboardViewSet(viewsets.ViewSet):
+    
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"])
+    def me(self, request):
+        user = request.user
+        today = timezone.now().date()
+        if user.is_client():
+            try:
+                active_membership = (
+                    MembershipPass.objects
+                    .filter(client=user, is_active=True, end_date__gte=today)
+                    .select_related("client")
+                    .latest("end_date")
+                )
+            except MembershipPass.DoesNotExist:
+                active_membership = None
+
+            expiring_soon_count = (
+                MembershipPass.objects
+                .filter(client=user, is_active=True, end_date__range=[today, today + timedelta(days=7)])
+                .count()
+            )
+
+            recent_visits = (
+                GymVisit.objects
+                .filter(client=user)
+                .select_related("membership_pass")
+                .order_by("-visit_date")[:5]
+            )
+
+            serializer = ClientDashboardSerializer({
+                "active_membership": active_membership,
+                "expiring_soon_count": expiring_soon_count,
+                "recent_visits": recent_visits,
+            })
+            return Response(serializer.data)
+
+        elif user.is_coach():
+            clients = User.objects.filter(coach=user).only("id", "email", "first_name", "last_name", "role")
+            client_count = clients.count()
+
+            serializer = CoachDashboardSerializer({
+                "client_count": client_count,
+                "clients": clients,
+            })
+            return Response(serializer.data)
+
+        elif user.is_administrator():
+            start_30_days = today - timedelta(days=30)
+            start_week = today - timedelta(days=7)
+
+            total_users = User.objects.count()
+            total_clients = User.objects.filter(role="client").count()
+            total_coaches = User.objects.filter(role="coach").count()
+
+            active_memberships = MembershipPass.objects.filter(is_active=True, end_date__gte=today).count()
+            expiring_memberships = MembershipPass.objects.filter(
+                is_active=True,
+                end_date__range=[today, today + timedelta(days=7)]
+            ).count()
+
+            visits_last_30_days = GymVisit.objects.filter(visit_date__date__gte=start_30_days).count()
+            new_members_last_week = User.objects.filter(role="client", created_at__gte=start_week).count()
+
+            serializer = AdminDashboardSerializer({
+                "total_users": total_users,
+                "total_clients": total_clients,
+                "total_coaches": total_coaches,
+                "active_memberships": active_memberships,
+                "expiring_memberships": expiring_memberships,
+                "visits_last_30_days": visits_last_30_days,
+                "new_members_last_week": new_members_last_week,
+            })
+            return Response(serializer.data)
+        return Response({"error": "No dashboard available for this user role."}, status=status.HTTP_404_NOT_FOUND)
     
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()

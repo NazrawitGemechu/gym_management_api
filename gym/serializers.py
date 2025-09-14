@@ -115,3 +115,21 @@ class CoachWithClientsSerializer(serializers.ModelSerializer):
         
     def get_clients(self,obj):
         return [c.email for c in obj.clients.all()]
+    
+class ClientDashboardSerializer(serializers.Serializer):
+    active_membership = MembershipPassSerializer(allow_null=True)
+    expiring_soon_count = serializers.IntegerField()
+    recent_visits = GymVisitHistorySerializer(many=True)
+
+class CoachDashboardSerializer(serializers.Serializer):
+    client_count = serializers.IntegerField()
+    clients = UserListSerializer(many=True)
+
+class AdminDashboardSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_clients = serializers.IntegerField()
+    total_coaches = serializers.IntegerField()
+    active_memberships = serializers.IntegerField()
+    expiring_memberships = serializers.IntegerField()
+    visits_last_30_days = serializers.IntegerField()
+    new_members_last_week = serializers.IntegerField()

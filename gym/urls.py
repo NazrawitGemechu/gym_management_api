@@ -3,9 +3,10 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'users',views.UserViewSet,basename='user')
-router.register(r'membership-passes',views.MembershipPassViewSet,basename='membershippass')
-router.register(r'gym-visits',views.GymVisitViewSet,basename='gymvisit')
+router.register(r'users',views.UserViewSet)
+router.register(r'membership-passes',views.MembershipPassViewSet)
+router.register(r'gym-visits',views.GymVisitViewSet)
+router.register(r'dashboard',views.DashboardViewSet,basename='dashboard')
 
 
 
