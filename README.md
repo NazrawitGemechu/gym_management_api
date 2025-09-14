@@ -54,7 +54,7 @@ An administrator user will be automatically created upon running migrations if o
 
 ### Accessing the API
 
-*   The API will be accessible at `http://localhost:8000/`.
+*   The API will be accessible at `http://localhost:8000/api`.
 
 ### Running Tests
 
