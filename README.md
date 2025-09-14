@@ -1,6 +1,6 @@
 # Gym Management API
 
-This project provides a RESTful API for managing a gym, including users, membership passes, and gym visits. It's built using Django REST Framework, and designed to be run with Docker.
+This project provides a RESTful API for managing a gym, including users, membership passes, and gym visits. It is built with Django REST Framework and uses PostgreSQL as the database. The application is containerized with Docker for easy setup and deployment.
 
 ## Functionalities
 
